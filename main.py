@@ -35,20 +35,28 @@ def tokenize_batch(batch):
 
 
 def process_mongodb_collection_in_batch(
-    db_name, source_collection_name, target_collection_name, batch_size, transform_fns
+    db_name,
+    source_collection_name,
+    target_collection_name,
+    batch_size,
+    X_transform_fns,
+    y_transform_fns,
+    db_fields,
+    db_query={},
 ):
-    dataset = MongoDataset(db_name, source_collection_name)
+    dataset = MongoDataset(db_name, source_collection_name, db_query, db_fields)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
     target_collection = MongoClient("mongodb://localhost:27017/")[db_name][
         target_collection_name
     ]
 
     for X_tuple, y_tuple in dataloader:
-        X = list(X_tuple)
+        X = [item for sublist in X_tuple for item in sublist]
         y = list(y_tuple)
-        for transform_fn in transform_fns:
+        for transform_fn in X_transform_fns:
             X = transform_fn(X)
-            print(type(X))
+        for transform_fn in y_transform_fns:
+            y = transform_fn(y)
         if isinstance(X, BatchEncoding):
             transformed_batch = []
             for i in range(len(X["input_ids"])):
@@ -57,7 +65,7 @@ def process_mongodb_collection_in_batch(
                         "input_ids": X["input_ids"][i].tolist(),
                         "attention_mask": X["attention_mask"][i].tolist(),
                         "token_type_ids": X["token_type_ids"][i].tolist(),
-                        "label": y[i],
+                        "label": y[i].tolist(),
                     }
                 )
         elif isinstance(X, BaseModelOutputWithPoolingAndCrossAttentions):
@@ -74,8 +82,8 @@ def process_mongodb_collection_in_batch(
         target_collection.insert_many(transformed_batch)
 
 
-def label_to_onehot(label):
-    label = label.lower()
+def label_to_onehot_batch(batch):
+    one_hot_batch = []
     label_to_onehot_dict = {
         "afd": [1, 0, 0, 0, 0],
         "cdu": [0, 1, 0, 0, 0],
@@ -83,7 +91,9 @@ def label_to_onehot(label):
         "fdp": [0, 0, 0, 1, 0],
         "spd": [0, 0, 0, 0, 1],
     }
-    return label_to_onehot_dict[label]
+    for label in batch:
+        one_hot_batch.append(label_to_onehot_dict[label])
+    return one_hot_batch
 
 
 class MongoDataset(Dataset):
@@ -117,7 +127,17 @@ class MongoDataset(Dataset):
     def __getitem__(self, index):
         document = self.data[index]
 
-        return tuple(document[field] for field in self.output_fields if field != "_id")
+        label = document.get("label", [])
+        label_tensor = torch.tensor(
+            label, dtype=torch.float32
+        )  # needed to prevent pytorch dataset from stacking the labels into column tensors
+
+        other_fields = tuple(
+            document[field]
+            for field in self.output_fields
+            if field != "_id" and field != "label"
+        )
+        return other_fields, label_tensor
 
 
 class PretrainedTextModelWithClassficationHead(nn.Module):
@@ -202,10 +222,12 @@ add_tokens_to_tokenizer(additional_tokens, tokenizer, model)
 
 process_mongodb_collection_in_batch(
     db_name="tweet-o-mat",
-    source_collection_name="tweets",
-    target_collection_name="tokenized_tweets",
+    source_collection_name="tweets_onehot",
+    target_collection_name="tweets_tokenized",
     batch_size=32,
-    transform_fns=[preprocess_text, tokenize_batch],
+    X_transform_fns=[tokenize_batch],
+    y_transform_fns=[],
+    db_fields=["text", "label"],
 )
 
 bert_model = PretrainedTextModelWithClassficationHead(
