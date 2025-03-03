@@ -1,6 +1,5 @@
 import asyncio
 
-import twikit
 from pymongo import MongoClient
 from twikit import Client
 
@@ -33,7 +32,7 @@ async def fetch_and_store_tweets(username: str, client: Client, label: str, coun
         tweets = await tweets.next()
 
 
-async def main():
+async def fetch_and_store_german_politics_tweets():
     gruenen_handles = [
         "roberthabeck",
         "Die_Gruenen",
@@ -91,8 +90,3 @@ async def main():
     for handle in fdp_handles:
         await fetch_and_store_tweets(handle, client, "fdp", 200)
         await asyncio.sleep(60 * 20)
-
-
-collection.delete_many({})
-
-asyncio.run(main())

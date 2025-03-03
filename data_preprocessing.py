@@ -7,7 +7,7 @@ from transformers.modeling_outputs import BaseModelOutputWithPoolingAndCrossAtte
 from transformers.tokenization_utils_base import BatchEncoding
 
 
-def preprocess_text(texts):
+def preprocess_text_batch(texts):
     for i, text in enumerate(texts):
         text = text.replace("–", "-")
         text = re.sub(r"\s+", " ", text)
@@ -90,6 +90,10 @@ def label_to_onehot_batch(batch):
     return one_hot_batch
 
 
+def is_list_of_numbers(obj):
+    return isinstance(obj, list) and all(isinstance(item, (int, float)) for item in obj)
+
+
 class MongoDataset(Dataset):
     def __init__(self, db_name, collection_name, query={}, output_fields=None):
         """
@@ -122,15 +126,16 @@ class MongoDataset(Dataset):
         document = self.data[index]
 
         label = document.get("label", [])
-        label_tensor = torch.tensor(
-            label, dtype=torch.float32
-        )  # needed to prevent pytorch dataset from stacking the labels into column tensors
+        if is_list_of_numbers(label):
+            label = torch.tensor(
+                label, dtype=torch.float32
+            )  # needed to prevent pytorch dataset from stacking the labels into column tensors
 
         other_fields = []
         for field in self.output_fields:
             if field != "_id" and field != "label":
                 field_value = document[field]
-                if isinstance(field_value, list):
+                if is_list_of_numbers(field_value):
                     field_value = torch.tensor(field_value, dtype=torch.long)
                 other_fields.append(field_value)
-        return tuple(other_fields), label_tensor
+        return tuple(other_fields), label
