@@ -21,13 +21,14 @@ def preprocess_text_batch(texts):
     return texts
 
 
-def tokenize_batch(batch, tokenizer):
+def tokenize_batch(batch, tokenizer, max_length=128):
     """
     Tokenize the text batch using the provided tokenizer.
     """
     tokenized = tokenizer(
         batch,
-        padding=True,
+        padding="max_length",
+        max_length=max_length,
         truncation=True,
         return_tensors="pt",
     )

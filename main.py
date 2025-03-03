@@ -1,5 +1,6 @@
 import asyncio
 from collections import defaultdict
+from functools import partial
 
 import matplotlib.pyplot as plt
 import torch
@@ -249,18 +250,21 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     model = AutoModel.from_pretrained(MODEL_NAME)
 
-    asyncio.run(fetch_and_store_german_politics_tweets())  # data already loaded
+    asyncio.run(fetch_and_store_german_politics_tweets())
 
     explore_data()
 
-    prepare_tokenizer(tokenizer, model)  # Data already tokenized
+    prepare_tokenizer(tokenizer, model)
 
     process_mongodb_collection_in_batch(  # preprocess and tokenize data
         db_name="tweet-o-mat",
         source_collection_name="tweets",
         target_collection_name="tweets_tokenized",
         batch_size=32,
-        X_transform_fns=[preprocess_text_batch, tokenize_batch],
+        X_transform_fns=[
+            preprocess_text_batch,
+            partial(tokenize_batch, tokenizer=tokenizer),
+        ],
         y_transform_fns=[label_to_onehot_batch],
         db_fields=["text", "label"],
     )
