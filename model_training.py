@@ -1,9 +1,11 @@
 import time
+from typing import List
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
+from transformers import AutoModel, AutoTokenizer
 
 
 class PretrainedTextModelWithClassficationHead(nn.Module):
@@ -13,11 +15,11 @@ class PretrainedTextModelWithClassficationHead(nn.Module):
 
     def __init__(
         self,
-        text_model,
-        num_classes,
-        train_embeddings=False,
-        train_text_model_core=False,
-    ):
+        text_model: AutoModel,
+        num_classes: int,
+        train_embeddings: bool = False,
+        train_text_model_core: bool = False,
+    ) -> None:
         super().__init__()
         self.text_model = text_model
         for param in self.text_model.parameters():
@@ -33,7 +35,12 @@ class PretrainedTextModelWithClassficationHead(nn.Module):
                 param.requires_grad = False
         self.classifier = nn.Linear(text_model.config.hidden_size, num_classes)
 
-    def forward(self, input_ids, attention_mask=None, token_type_ids=None):
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: torch.Tensor | None = None,
+        token_type_ids: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         outputs = self.text_model(
             input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids
         )
@@ -42,7 +49,7 @@ class PretrainedTextModelWithClassficationHead(nn.Module):
         return logits
 
 
-def check_words_in_tokenizer(words, tokenizer):
+def check_words_in_tokenizer(words: List[str], tokenizer: AutoTokenizer) -> None:
     """
     checks if the words are in the tokenizer and prints the result.
     """
@@ -53,7 +60,7 @@ def check_words_in_tokenizer(words, tokenizer):
             print(f"Word {word} in tokenizer")
 
 
-def check_tokenization_of_words(words, tokenizer):
+def check_tokenization_of_words(words: List[str], tokenizer: AutoTokenizer) -> None:
     """
     prints the tokenization of a given list of words using the given tokenizer.
     """
@@ -62,7 +69,9 @@ def check_tokenization_of_words(words, tokenizer):
         print(f"Tokenized word {word}: {tokenized_word}")
 
 
-def add_tokens_to_tokenizer(words, tokenizer, model):
+def add_tokens_to_tokenizer(
+    words: List[str], tokenizer: AutoTokenizer, model: AutoModel
+) -> None:
     """
     adds the words to the tokenizer and resizes the model's embedding layer to match the new vocabulary size.
     """
@@ -78,7 +87,7 @@ def train_step_classification(
     optimizer: torch.optim.Optimizer,
     device: torch.device,
     metric_fns=[],
-):
+) -> dict:
     """
     Trains a PyTorch classification model for a single epoch.
 
@@ -123,7 +132,7 @@ def test_step_classification(
     loss_fn: nn.Module,
     device: torch.device,
     metric_fns=[],
-):
+) -> dict:
     """
     Tests a PyTorch classification model on a dataset.
 
@@ -169,7 +178,7 @@ def train_model_classification(
     test_interval: int,
     epochs: int,
     metric_fns=[],
-):
+) -> tuple:
     """
     Trains a PyTorch classification model.
 
@@ -185,7 +194,7 @@ def train_model_classification(
       metric_fns: A list of metric functions to compute. arguments are passed based on the sklearn convention (y_true,
       y_pred.)
     Returns:
-      A dictionary of the computed training and test metrics as well as the time it took to train the model.
+      A tuple consisting of a dictionary of the computed training and test metrics as well as the time it took to train the model.
     """
     train_metrics = {}
     test_metrics = {}

@@ -17,7 +17,9 @@ async def login(auth_info_1: str, password: str) -> Client:
     return client
 
 
-async def fetch_and_store_tweets(username: str, client: Client, label: str, count: int):
+async def fetch_and_store_tweets(
+    username: str, client: Client, label: str, count: int
+) -> None:
     """
     Fetch tweets from a user and store them in the database using the twikit library.
     """
@@ -38,7 +40,7 @@ async def fetch_and_store_tweets(username: str, client: Client, label: str, coun
         tweets = await tweets.next()
 
 
-async def fetch_and_store_german_politics_tweets():
+async def fetch_and_store_german_politics_tweets() -> None:
     """
     Fetch tweets from german politicians and store them in the database.
     """

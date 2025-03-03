@@ -1,13 +1,15 @@
 import re
+from typing import Any, List
 
 import torch
 from pymongo import MongoClient
 from torch.utils.data import DataLoader, Dataset
+from transformers import AutoModel, AutoTokenizer
 from transformers.modeling_outputs import BaseModelOutputWithPoolingAndCrossAttentions
 from transformers.tokenization_utils_base import BatchEncoding
 
 
-def preprocess_text_batch(texts):
+def preprocess_text_batch(texts: List[str]) -> List[str]:
     """
     Preprocess the text batch by removing special characters, URLs, and extra spaces.
     """
@@ -21,7 +23,9 @@ def preprocess_text_batch(texts):
     return texts
 
 
-def tokenize_batch(batch, tokenizer, max_length=128):
+def tokenize_batch(
+    batch: List[str], tokenizer: AutoTokenizer, max_length: int = 128
+) -> BatchEncoding:
     """
     Tokenize the text batch using the provided tokenizer.
     """
@@ -36,15 +40,15 @@ def tokenize_batch(batch, tokenizer, max_length=128):
 
 
 def process_mongodb_collection_in_batch(
-    db_name,
-    source_collection_name,
-    target_collection_name,
-    batch_size,
-    X_transform_fns,
-    y_transform_fns,
-    db_fields,
-    db_query={},
-):
+    db_name: str,
+    source_collection_name: str,
+    target_collection_name: str,
+    batch_size: int,
+    X_transform_fns: List[callable],
+    y_transform_fns: List[callable],
+    db_fields: List[str],
+    db_query: dict = {},
+) -> None:
     """
     Processes a MongoDB collection in batches, applies transformation functions to the data,
     and writes the transformed data to a target collection.
@@ -129,7 +133,7 @@ def process_mongodb_collection_in_batch(
                         "input_ids": X["input_ids"][i].tolist(),
                         "attention_mask": X["attention_mask"][i].tolist(),
                         "token_type_ids": X["token_type_ids"][i].tolist(),
-                        "label": y[i].tolist(),
+                        "label": y[i],
                     }
                 )
         elif isinstance(X, BaseModelOutputWithPoolingAndCrossAttentions):
@@ -146,7 +150,7 @@ def process_mongodb_collection_in_batch(
         target_collection.insert_many(transformed_batch)
 
 
-def label_to_onehot_batch(batch):
+def label_to_onehot_batch(batch: List[str]) -> List[List[int]]:
     """
     Convert a batch of labels to one-hot encoding. Only works for the labels "afd", "cdu", "die grünen", "fdp", and "spd".
     """
@@ -163,7 +167,7 @@ def label_to_onehot_batch(batch):
     return one_hot_batch
 
 
-def is_list_of_numbers(obj):
+def is_list_of_numbers(obj: Any) -> bool:
     """
     Check if an object is a list of numbers (int or float).
     """
@@ -171,7 +175,13 @@ def is_list_of_numbers(obj):
 
 
 class MongoDataset(Dataset):
-    def __init__(self, db_name, collection_name, query={}, output_fields=None):
+    def __init__(
+        self,
+        db_name: str,
+        collection_name: str,
+        query: dict = {},
+        output_fields: list | None = None,
+    ) -> None:
         """
         Pytorch Dataset class for loading data from a MongoDB collection.
         Args:
@@ -195,10 +205,10 @@ class MongoDataset(Dataset):
 
         self.data = list(self.collection.find(query, self.output_fields))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.ids)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> tuple:
         document = self.data[index]
 
         label = document.get("label", [])

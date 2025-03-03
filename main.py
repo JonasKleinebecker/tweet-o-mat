@@ -1,6 +1,7 @@
 import asyncio
 from collections import defaultdict
 from functools import partial
+from typing import List
 
 import matplotlib.pyplot as plt
 import torch
@@ -26,7 +27,7 @@ from model_training import (
 )
 
 
-def prepare_tokenizer(tokenizer, model):
+def prepare_tokenizer(tokenizer: AutoTokenizer, model: AutoModel) -> None:
     """
     Add additional tokens to the tokenizer and resize the model's embedding layer to match the new vocabulary size.
     """
@@ -50,7 +51,9 @@ def prepare_tokenizer(tokenizer, model):
     check_tokenization_of_words(additional_tokens, tokenizer)
 
 
-def calculate_percentage_of_tweets_mentioning_topic_per_label(dataset, topic_words):
+def calculate_percentage_of_tweets_mentioning_topic_per_label(
+    dataset: MongoDataset, topic_words: List[str]
+) -> tuple:
     """
     Calculate the percentage of tweets mentioning a specific topic for each label
     and the overall occurrence of the topic across all labels.
@@ -91,7 +94,7 @@ def calculate_percentage_of_tweets_mentioning_topic_per_label(dataset, topic_wor
     return percentage_by_label, overall_percentage
 
 
-def plot_overall_occurrence(topics, overall_percentages):
+def plot_overall_occurrence(topics: dict, overall_percentages: dict) -> None:
     """
     Plot a bar chart showing the overall percentage occurrence of each topic.
     """
@@ -108,7 +111,9 @@ def plot_overall_occurrence(topics, overall_percentages):
     plt.show()
 
 
-def plot_topic_occurrence_per_label(topic_name, percentages_by_label):
+def plot_topic_occurrence_per_label(
+    topic_name: str, percentages_by_label: dict
+) -> None:
     """
     Plot a bar chart showing the percentage occurrence of a topic for each label.
     """
@@ -123,7 +128,7 @@ def plot_topic_occurrence_per_label(topic_name, percentages_by_label):
     plt.show()
 
 
-def explore_data():
+def explore_data() -> None:
     """
     Explore the dataset and perform some basic analysis.
     """
@@ -192,7 +197,7 @@ def explore_data():
         plot_topic_occurrence_per_label(topic_name, percentages_by_label)
 
 
-def split_data_and_train_model(text_model):
+def split_data_and_train_model(text_model: AutoModel) -> nn.Module:
     """
     Split the data and train the model using a specific text_model as a base.
     """
@@ -239,13 +244,13 @@ def split_data_and_train_model(text_model):
         optimizer=optimizer,
         device=device,
         test_interval=1,
-        epochs=5,
+        epochs=20,
         metric_fns=[accuracy_score],
     )
     return bert_model
 
 
-def main():
+def main() -> None:
     MODEL_NAME = "bert-base-german-cased"
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     model = AutoModel.from_pretrained(MODEL_NAME)
@@ -271,7 +276,7 @@ def main():
 
     trained_model = split_data_and_train_model(model)
 
-    torch.save(trained_model.state_dict(), "bert_base_model_v1.pt")
+    torch.save(trained_model.state_dict(), "bert_base_model_v2.pt")
 
 
 if __name__ == "__main__":
