@@ -17,7 +17,6 @@ from transformers.tokenization_utils_base import BatchEncoding
 
 def preprocess_text(texts):
     for i, text in enumerate(texts):
-        text = text.lower()
         text = text.replace("–", "-")
         text = re.sub(r"\s+", " ", text)
         text = text.strip()
