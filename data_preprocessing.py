@@ -8,6 +8,9 @@ from transformers.tokenization_utils_base import BatchEncoding
 
 
 def preprocess_text_batch(texts):
+    """
+    Preprocess the text batch by removing special characters, URLs, and extra spaces.
+    """
     for i, text in enumerate(texts):
         text = text.replace("–", "-")
         text = re.sub(r"\s+", " ", text)
@@ -19,6 +22,9 @@ def preprocess_text_batch(texts):
 
 
 def tokenize_batch(batch, tokenizer):
+    """
+    Tokenize the text batch using the provided tokenizer.
+    """
     tokenized = tokenizer(
         batch,
         padding=True,
@@ -38,6 +44,69 @@ def process_mongodb_collection_in_batch(
     db_fields,
     db_query={},
 ):
+    """
+    Processes a MongoDB collection in batches, applies transformation functions to the data,
+    and writes the transformed data to a target collection.
+
+    This function is designed to handle large datasets by loading and processing data in
+    batches. It supports transformations for both features (X) and labels (y), and can
+    handle different types of output formats (e.g., `BatchEncoding`, `BaseModelOutputWithPoolingAndCrossAttentions`).
+
+    Args:
+        db_name (str): The name of the MongoDB database containing the source and target collections.
+        source_collection_name (str): The name of the source MongoDB collection to read data from.
+        target_collection_name (str): The name of the target MongoDB collection to write transformed data to.
+        batch_size (int): The number of documents to process in each batch.
+        X_transform_fns (list of callable): A list of transformation functions to apply to the features (X).
+                                           Each function should accept a list of feature data and return
+                                           transformed feature data.
+        y_transform_fns (list of callable): A list of transformation functions to apply to the labels (y).
+                                           Each function should accept a list of label data and return
+                                           transformed label data.
+        db_fields (list of str): A list of fields to retrieve from the source collection.
+        db_query (dict, optional): A MongoDB query to filter documents in the source collection.
+                                   Defaults to an empty dictionary, which retrieves all documents.
+
+    Behavior:
+        1. Loads data from the source MongoDB collection in batches using a PyTorch DataLoader.
+        2. Applies the provided transformation functions to the features (X) and labels (y) in each batch.
+        3. Handles different types of transformed outputs:
+           - If the transformed features are of type `BatchEncoding` (e.g., from a Hugging Face tokenizer),
+             the function extracts `input_ids`, `attention_mask`, and `token_type_ids` for each document.
+           - If the transformed features are of type `BaseModelOutputWithPoolingAndCrossAttentions`
+             (e.g., from a Hugging Face model), the function extracts the `last_hidden_state` for each document.
+           - For other types of transformed features, the function assumes the data is in a simple text format.
+        4. Writes the transformed data to the target MongoDB collection.
+
+    Example:
+        ```python
+        # Define transformation functions
+        def tokenize_text(texts):
+            return tokenizer(texts, padding=True, truncation=True, return_tensors="pt")
+
+        def encode_labels(labels):
+            return [label_encoder[label] for label in labels]
+
+        # Process the MongoDB collection
+        process_mongodb_collection_in_batch(
+            db_name="my_database",
+            source_collection_name="raw_tweets",
+            target_collection_name="processed_tweets",
+            batch_size=32,
+            X_transform_fns=[tokenize_text],
+            y_transform_fns=[encode_labels],
+            db_fields=["text", "label"],
+            db_query={"label": {"$exists": True}},
+        )
+        ```
+
+    Notes:
+        - The function assumes that the source collection contains documents with fields specified in `db_fields`.
+        - The target collection will contain documents with transformed fields (e.g., `input_ids`, `attention_mask`,
+          `last_hidden_state`, or `text`), depending on the transformations applied.
+        - Ensure that the transformation functions are compatible with the data format in the source collection.
+    """
+
     dataset = MongoDataset(db_name, source_collection_name, db_query, db_fields)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
     target_collection = MongoClient("mongodb://localhost:27017/")[db_name][
@@ -77,6 +146,9 @@ def process_mongodb_collection_in_batch(
 
 
 def label_to_onehot_batch(batch):
+    """
+    Convert a batch of labels to one-hot encoding. Only works for the labels "afd", "cdu", "die grünen", "fdp", and "spd".
+    """
     one_hot_batch = []
     label_to_onehot_dict = {
         "afd": [1, 0, 0, 0, 0],
@@ -91,6 +163,9 @@ def label_to_onehot_batch(batch):
 
 
 def is_list_of_numbers(obj):
+    """
+    Check if an object is a list of numbers (int or float).
+    """
     return isinstance(obj, list) and all(isinstance(item, (int, float)) for item in obj)
 
 

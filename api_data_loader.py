@@ -9,12 +9,18 @@ collection = db["tweets"]
 
 
 async def login(auth_info_1: str, password: str) -> Client:
+    """
+    Log into the twitter API with the given auth_info_1 and password using the twikit library.
+    """
     client = Client()
     await client.login(auth_info_1=auth_info_1, password=password)
     return client
 
 
 async def fetch_and_store_tweets(username: str, client: Client, label: str, count: int):
+    """
+    Fetch tweets from a user and store them in the database using the twikit library.
+    """
     user = await client.get_user_by_screen_name(username)
     tweets = await user.get_tweets(tweet_type="Tweets", count=count)
     stored_tweets = 0
@@ -33,6 +39,9 @@ async def fetch_and_store_tweets(username: str, client: Client, label: str, coun
 
 
 async def fetch_and_store_german_politics_tweets():
+    """
+    Fetch tweets from german politicians and store them in the database.
+    """
     gruenen_handles = [
         "roberthabeck",
         "Die_Gruenen",
@@ -73,7 +82,7 @@ async def fetch_and_store_german_politics_tweets():
 
     for handle in gruenen_handles:
         await fetch_and_store_tweets(handle, client, "die grünen", 200)
-        await asyncio.sleep(60 * 20)
+        await asyncio.sleep(60 * 20)  # prevent rate limit
 
     for handle in cdu_handles:
         await fetch_and_store_tweets(handle, client, "cdu", 200)

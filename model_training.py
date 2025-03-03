@@ -7,6 +7,10 @@ from tqdm.auto import tqdm
 
 
 class PretrainedTextModelWithClassficationHead(nn.Module):
+    """
+    A PyTorch module that wraps a pretrained text model and adds a classification head.
+    """
+
     def __init__(
         self,
         text_model,
@@ -39,6 +43,9 @@ class PretrainedTextModelWithClassficationHead(nn.Module):
 
 
 def check_words_in_tokenizer(words, tokenizer):
+    """
+    checks if the words are in the tokenizer and prints the result.
+    """
     for word in words:
         if word not in tokenizer.vocab.keys():
             print(f"Word {word} not in tokenizer")
@@ -47,12 +54,18 @@ def check_words_in_tokenizer(words, tokenizer):
 
 
 def check_tokenization_of_words(words, tokenizer):
+    """
+    prints the tokenization of a given list of words using the given tokenizer.
+    """
     for word in words:
         tokenized_word = tokenizer.tokenize(word)
         print(f"Tokenized word {word}: {tokenized_word}")
 
 
 def add_tokens_to_tokenizer(words, tokenizer, model):
+    """
+    adds the words to the tokenizer and resizes the model's embedding layer to match the new vocabulary size.
+    """
     for word in words:
         tokenizer.add_tokens(word)
     model.resize_token_embeddings(len(tokenizer))

@@ -26,6 +26,9 @@ from model_training import (
 
 
 def prepare_tokenizer(tokenizer, model):
+    """
+    Add additional tokens to the tokenizer and resize the model's embedding layer to match the new vocabulary size.
+    """
     additional_tokens = [
         "URL",
         "weidel",
@@ -120,6 +123,9 @@ def plot_topic_occurrence_per_label(topic_name, percentages_by_label):
 
 
 def explore_data():
+    """
+    Explore the dataset and perform some basic analysis.
+    """
     dataset = MongoDataset(
         db_name="tweet-o-mat",
         collection_name="tweets",
@@ -185,7 +191,10 @@ def explore_data():
         plot_topic_occurrence_per_label(topic_name, percentages_by_label)
 
 
-def prepare_data_and_train_model(text_model):
+def split_data_and_train_model(text_model):
+    """
+    Split the data and train the model using a specific text_model as a base.
+    """
     bert_model = PretrainedTextModelWithClassficationHead(
         text_model=text_model,
         num_classes=5,
@@ -256,7 +265,7 @@ def main():
         db_fields=["text", "label"],
     )
 
-    trained_model = prepare_data_and_train_model(model)
+    trained_model = split_data_and_train_model(model)
 
     torch.save(trained_model.state_dict(), "bert_base_model_v1.pt")
 
